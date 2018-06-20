@@ -1,9 +1,9 @@
 import math
 import matplotlib.pyplot as plt
 
-def printBuyInfo(smartTokens, connectorTokens, effectivePrice, tokenBalance, connectorBalance):
+def printBuyInfo(smartTokens, connectorTokens, effectivePrice, tokenBalance, connectorBalance, iteration):
     print("==========================================")
-    print(f"          ---- BUY ORDER ----            ")
+    print(f"      ---- BUY ORDER {iteration + 1} ----")
     print("==========================================")
     print(f" - Tokens Bought: {smartTokens}")
     print(f" - ETH paid: {connectorTokens}")
@@ -13,9 +13,9 @@ def printBuyInfo(smartTokens, connectorTokens, effectivePrice, tokenBalance, con
     print("==========================================")
 
 
-def printSellInfo(smartTokens, connectorTokens, effectivePrice, tokenBalance, connectorBalance):
+def printSellInfo(smartTokens, connectorTokens, effectivePrice, tokenBalance, connectorBalance, iteration):
     print("==========================================")
-    print(f"          ---- SELL ORDER ----           ")
+    print(f"     ---- SELL ORDER {iteration + 1} ----")
     print("==========================================")
     print(f" - Tokens Sold: {smartTokens}")
     print(f" - ETH received: {connectorTokens}")
@@ -28,7 +28,7 @@ def printSellInfo(smartTokens, connectorTokens, effectivePrice, tokenBalance, co
 class MarketMakerFormula:
     connectorWeight = 0.5
     tokenPrice = 1
-    tokenBalance = 1000
+    tokenSupply = 1000
     connectorBalance = 250
 
     def __init__(self):
@@ -37,8 +37,8 @@ class MarketMakerFormula:
     def buyTokens(self, eth):
         emittedSmartTokens = self.emitSmartTokens(eth)
         effectivePrice = self.getEffectivePrice(emittedSmartTokens, eth)
-        self.increaseTokenBalance(emittedSmartTokens)
-        self.decreaseEthBalance(eth)
+        self.increaseTokenSupply(emittedSmartTokens)
+        self.increaseEthBalance(eth)
         self.computeCurrentState()
 
         return emittedSmartTokens, eth, effectivePrice
@@ -46,36 +46,36 @@ class MarketMakerFormula:
     def sellTokens(self, smartTokens):
         eth = self.emitEth(smartTokens)
         effectivePrice = self.getEffectivePrice(smartTokens, eth)
-        self.increaseEthBalance(eth)
-        self.decreaseTokenBalance(smartTokens)
+        self.decreaseTokenSupply(smartTokens)
+        self.decreaseEthBalance(eth)
         self.computeCurrentState()
 
         return smartTokens, eth, effectivePrice,
 
     def emitSmartTokens(self, eth):
-        emittedSmartTokens = self.tokenBalance * (math.pow((1 + eth / self.connectorBalance), self.connectorWeight) - 1)
+        emittedSmartTokens = self.tokenSupply * (math.pow((1 + eth / self.connectorBalance), self.connectorWeight) - 1)
 
         return emittedSmartTokens
 
     def emitEth(self, smartTokens):
-        eth = self.connectorBalance * (math.pow((1 + smartTokens / self.tokenBalance),  1 / self.connectorWeight) - 1)
+        eth = self.connectorBalance * (math.pow((1 + smartTokens / self.tokenSupply), 1 / self.connectorWeight) - 1)
 
         return eth
 
     def setPrice(self):
         if self.connectorBalance != 0:
-            self.tokenPrice = self.connectorBalance / (self.tokenBalance * self.connectorWeight)
+            self.tokenPrice = self.connectorBalance / (self.tokenSupply * self.connectorWeight)
 
     def computeCurrentState(self):
         self.setPrice()
-        totalValue = self.tokenPrice * self.tokenBalance
+        totalValue = self.tokenPrice * self.tokenSupply
         self.connectorWeight = self.connectorBalance / totalValue
 
-    def decreaseTokenBalance(self, howMuch):
-        self.tokenBalance -= howMuch
+    def decreaseTokenSupply(self, howMuch):
+        self.tokenSupply -= howMuch
 
-    def increaseTokenBalance(self, howMuch):
-        self.tokenBalance += howMuch
+    def increaseTokenSupply(self, howMuch):
+        self.tokenSupply += howMuch
 
     def decreaseEthBalance(self, howMuch):
         self.connectorBalance -= howMuch
@@ -92,7 +92,7 @@ def printMarketMakerStatus(marketMaker: MarketMakerFormula):
     print(f"      ---- MARKET-MAKER STATUS ----      ")
     print("==========================================")
     print(f"    - Token Price: {marketMaker.tokenPrice}")
-    print(f"    - Token Balance: {marketMaker.tokenBalance}")
+    print(f"    - Token Balance: {marketMaker.tokenSupply}")
     print(f"    - Connector Balance: {marketMaker.connectorBalance}")
     print("==========================================")
 
@@ -103,26 +103,26 @@ def testMarketMaker(tries):
     tokenBalances = []
     tokenPrices = []
 
+    # Buy order
     for i in range(0, tries):
-        # Buy order
-        smartTokens, eth, effectivePrice = marketMaker.buyTokens(orderQuantity)
+        smartTokens, eth, effectivePrice = marketMaker.buyTokens(100)
         orderQuantity = smartTokens
-        printBuyInfo(smartTokens, eth, effectivePrice, marketMaker.tokenBalance, marketMaker.connectorBalance)
-        tokenBalances.append(marketMaker.tokenBalance)
+        printBuyInfo(smartTokens, eth, effectivePrice, marketMaker.tokenSupply, marketMaker.connectorBalance, i)
+        tokenBalances.append(marketMaker.tokenSupply)
         tokenPrices.append(marketMaker.tokenPrice)
 
+    # Sell order
     for i in range(0, tries):
-        # Sell order
-        smartTokens, eth, effectivePrice = marketMaker.sellTokens(orderQuantity)
-        printSellInfo(smartTokens, eth, effectivePrice, marketMaker.tokenBalance, marketMaker.connectorBalance)
+        smartTokens, eth, effectivePrice = marketMaker.sellTokens(100)
+        printSellInfo(smartTokens, eth, effectivePrice, marketMaker.tokenSupply, marketMaker.connectorBalance, i)
         orderQuantity = eth
-        tokenBalances.append(marketMaker.tokenBalance)
+        tokenBalances.append(marketMaker.tokenSupply)
         tokenPrices.append(marketMaker.tokenPrice)
 
     return tokenBalances, tokenPrices
 
 
-supply, price = testMarketMaker(tries=100)
+supply, price = testMarketMaker(tries=10000)
 
 
 # Note that using plt.subplots below is equivalent to using
